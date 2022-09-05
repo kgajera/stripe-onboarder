@@ -1,0 +1,74 @@
+{
+  "name": "stripe-onboarder",
+  "version": "1.0.0",
+  "description": "Automate onboarding Stripe Connect Express accounts using Puppeteer",
+  "keywords": [
+    "stripe",
+    "stripe-connect"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=14.20"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/kgajera/stripe-onboarder#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kgajera/stripe-onboarder.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kgajera/stripe-onboarder/issues"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "bin": {
+    "stripe-onboarder": "dist/cli.cjs"
+  },
+  "files": [
+    "dist/",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts src/cli.ts --clean --dts --format esm,cjs",
+    "format": "prettier --check .",
+    "format:fix": "prettier --write .",
+    "lint": "eslint .",
+    "lint:fix": "npm run lint -- --fix",
+    "start": "node dist/cli.js",
+    "test": "node --loader tsx --test test/onboard.ts",
+    "watch": "npm run build -- --watch"
+  },
+  "dependencies": {
+    "@faker-js/faker": "^7.5.0",
+    "chalk": "^5.0.1",
+    "inquirer": "^9.1.1",
+    "ora": "^6.1.2",
+    "puppeteer": "^17.1.0",
+    "stripe": "^10.8.0",
+    "yargs": "^17.5.1"
+  },
+  "devDependencies": {
+    "@tsconfig/node18-strictest-esm": "^1.0.1",
+    "@types/inquirer": "^9.0.1",
+    "@types/yargs": "^17.0.12",
+    "@typescript-eslint/eslint-plugin": "^5.36.2",
+    "@typescript-eslint/parser": "^5.36.2",
+    "dotenv": "^16.0.2",
+    "eslint": "^8.23.0",
+    "eslint-config-prettier": "^8.5.0",
+    "prettier": "^2.7.1",
+    "ts-node": "^10.9.1",
+    "tsup": "^6.2.3",
+    "tsx": "^3.9.0",
+    "typescript": "^4.8.2"
+  }
+}
