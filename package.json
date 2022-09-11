@@ -19,18 +19,16 @@
   "bugs": {
     "url": "https://github.com/kgajera/stripe-onboarder/issues"
   },
-  "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "require": "./dist/index.cjs",
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     }
   },
   "bin": {
-    "stripe-onboarder": "dist/cli.cjs"
+    "stripe-onboarder": "dist/cli.js"
   },
   "files": [
     "dist/",
@@ -38,7 +36,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsup src/index.ts src/cli.ts --clean --dts --format esm,cjs",
+    "build": "tsup src/index.ts src/cli.ts --clean --dts --format esm",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
     "lint": "eslint .",

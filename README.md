@@ -63,20 +63,18 @@ Default values are provided for all options that will allow the Express account 
 ```ts
 import { onboard } from "stripe-onboarder";
 
-(async () => {
-  const account = await stripe.accounts.create({ type: "express" });
+const account = await stripe.accounts.create({ type: "express" });
 
-  const accountLink = await stripe.accountLinks.create({
-    account: account.id,
-    type: "account_onboarding",
-  });
+const accountLink = await stripe.accountLinks.create({
+  account: account.id,
+  type: "account_onboarding",
+});
 
-  await onboard({
-    headless: false, // Boolean flag for Puppeteer to run browser in headless mode. Defaults to true.
-    url: accountLink.url, // Account Link URL for onboarding
-    values: {}, // Optional object of onboarding form values to override default values
-  });
-})();
+await onboard({
+  headless: false, // Boolean flag for Puppeteer to run browser in headless mode. Defaults to true.
+  url: accountLink.url, // Account Link URL for onboarding
+  values: {}, // Optional object of onboarding form values to override default values
+});
 ```
 
 > **Note**
