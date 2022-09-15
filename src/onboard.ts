@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import ora, { oraPromise } from "ora";
+import ora, { Options, oraPromise } from "ora";
 import { Browser, Page, launch } from "puppeteer";
 
 export type BusinessType = "company" | "non_profit" | "individual";
@@ -63,7 +63,7 @@ export async function onboard({
     customValues
   );
 
-  const oraOptions = (text: string) => ({
+  const oraOptions = (text: string): Options => ({
     isSilent: silent,
     text,
   });
@@ -80,7 +80,7 @@ export async function onboard({
   }, oraOptions("Navigating to Stripe"));
 
   const enhancedPage = enhancePage(page, {
-    silent,
+    oraOptions,
     values,
   });
 
@@ -106,7 +106,10 @@ export async function onboard({
  */
 function enhancePage(
   page: Page,
-  options: { silent: boolean; values: OnboardValues }
+  {
+    oraOptions,
+    values,
+  }: { oraOptions: (text: string) => Options; values: OnboardValues }
 ): EnhancedPage {
   const enhancedPage: EnhancedPage = {
     click: async (selector: string) => {
@@ -128,17 +131,17 @@ function enhancePage(
       }
     },
     task: async (promise: PageTask) => {
-      const navOra = ora("Navigating...").start();
+      const navOra = ora(oraOptions("Navigating...")).start();
       await page.waitForNetworkIdle({ idleTime: 500 });
       navOra.stop();
 
       const headingElement = await page.waitForSelector("h1");
       const heading = await headingElement?.evaluate((el) => el.textContent);
 
-      await oraPromise(async () => promise(enhancedPage, options.values), {
-        isSilent: options.silent,
-        text: heading?.trim() ?? "",
-      });
+      await oraPromise(
+        async () => promise(enhancedPage, values),
+        oraOptions(heading?.trim() ?? "")
+      );
     },
     tasks: async (...promises: (PageTask | false)[]) => {
       for (const promise of promises) {
