@@ -59,7 +59,7 @@ async function createAndOnboardAccount(values: Partial<OnboardValues> = {}) {
   return account;
 }
 
-async function waitForAccountVerification(accountId: string, timeout = 180000) {
+async function waitForAccountVerification(accountId: string, timeout = 120000) {
   const intervalLength = 5000;
 
   return new Promise((resolve, reject) => {
@@ -73,10 +73,7 @@ async function waitForAccountVerification(accountId: string, timeout = 180000) {
 
       const account = await stripe.accounts.retrieve(accountId);
 
-      if (
-        account.capabilities?.card_payments === "active" &&
-        account.capabilities?.transfers === "active"
-      ) {
+      if (account.charges_enabled) {
         clearInterval(interval);
         resolve(account);
       }
