@@ -1,5 +1,6 @@
 # Stripe Onboarder
 
+[![npm version](https://badge.fury.io/js/stripe-onboarder.svg)](https://badge.fury.io/js/stripe-onboarder)
 [![Test](https://github.com/kgajera/stripe-onboarder/actions/workflows/test.yml/badge.svg)](https://github.com/kgajera/stripe-onboarder/actions/workflows/test.yml)
 
 Automate the onboarding of Stripe [Express](https://stripe.com/docs/connect/express-accounts) accounts using [Puppeteer](https://pptr.dev). This is intended to be used in Stripe's test mode to onboard verified Connect accounts without having to manually complete the onboarding process.
@@ -78,4 +79,4 @@ await onboard({
 ```
 
 > **Note**
-> Immediately after the `onboard` function returns, the Connect account's status will be "pending" which means the account is still being verified by Stripe. This can take up to a few minutes to complete. You can poll [retrieving the account](https://stripe.com/docs/api/accounts/retrieve) to check on the status of the account's [`capabilities`](https://stripe.com/docs/api/accounts/object#account_object-capabilities) and list of [`requirements.pending_verification`](https://stripe.com/docs/api/accounts/object#account_object-requirements-pending_verification).
+> Immediately after the promise returned by the `onboard` function is resolved, the Connect account's status will be "Pending" which means the account is still being verified by Stripe. This can take up to a few minutes to complete. You can poll [retrieving the account](https://stripe.com/docs/api/accounts/retrieve) to check if the account has [`charges_enabled`](https://stripe.com/docs/api/accounts/object#account_object-charges_enabled) and [`payouts_enabled`](https://stripe.com/docs/api/accounts/object#account_object-payouts_enabled).
