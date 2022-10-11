@@ -5,6 +5,8 @@
 
 Automate the onboarding of Stripe [Express](https://stripe.com/docs/connect/express-accounts) accounts using [Puppeteer](https://pptr.dev). This is intended to be used in Stripe's test mode to onboard verified Connect accounts without having to manually complete the onboarding process.
 
+![stripe-onboarder](https://user-images.githubusercontent.com/1087679/194986317-cc2117ec-0328-430b-94b7-7b9d6e928ab0.gif)
+
 Onboarding accounts with the [`card_payments`](https://stripe.com/docs/api/accounts/object#account_object-capabilities-card_payments) and [`transfers`](https://stripe.com/docs/api/accounts/object#account_object-capabilities-transfers) capabilities are supported. Please open an [issue](https://github.com/kgajera/stripe-onboarder/issues/new) if the onboarder is not working with your account's requested capabilities.
 
 ## Installation
