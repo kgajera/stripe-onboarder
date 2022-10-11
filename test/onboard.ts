@@ -59,7 +59,7 @@ async function createAndOnboardAccount(values: Partial<OnboardValues> = {}) {
   return account;
 }
 
-async function waitForAccountVerification(accountId: string, timeout = 120000) {
+async function waitForAccountVerification(accountId: string, timeout = 180000) {
   const intervalLength = 5000;
 
   return new Promise((resolve, reject) => {
