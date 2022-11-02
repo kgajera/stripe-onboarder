@@ -10,6 +10,7 @@ type EnhancedPage = Pick<
   Page,
   | "click"
   | "evaluate"
+  | "keyboard"
   | "select"
   | "type"
   | "waitForNavigation"
@@ -121,6 +122,7 @@ function enhancePage(
       }
     },
     evaluate: (...params) => page.evaluate(...params),
+    keyboard: page.keyboard,
     select: async (selector: string, ...value: string[]) => {
       try {
         const element = await page.waitForSelector(selector, { timeout: 100 });
@@ -318,6 +320,9 @@ async function submitPayoutBankAccount(
  */
 async function typeAddress(page: EnhancedPage, values: OnboardValues) {
   await page.type('[name="address"]', values.address.line1);
+
+  // This is necessary to prevent autocompleting the address fields
+  await page.keyboard.press("Tab");
 
   if (values.address.line2?.length) {
     await page.type('[name="address-line2"]', values.address.line2);
