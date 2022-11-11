@@ -121,7 +121,6 @@ yargs(hideBin(process.argv))
         const stripeSecretKey = await getStripeSecretKey(argv);
 
         if (!stripeSecretKey) {
-          console.log();
           return;
         }
 
