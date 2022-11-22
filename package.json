@@ -1,6 +1,6 @@
 {
   "name": "stripe-onboarder",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Automate onboarding Stripe Connect Express accounts using Puppeteer",
   "keywords": [
     "stripe",
