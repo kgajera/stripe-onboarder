@@ -50,7 +50,7 @@ Default values are provided for all options that will allow the Express account 
 | [`--company_phone`](https://stripe.com/docs/api/accounts/create#create_account-company-phone)                                                       | "0000000000"                                                       |
 | [`--company_tax_id`](https://stripe.com/docs/api/accounts/create#create_account-company-tax_id)                                                     | "000000000"                                                        |
 | [`--company_url`](https://stripe.com/docs/api/accounts/create#create_account-business_profile-url)                                                  | [Random URL](https://fakerjs.dev/api/internet.html#url)            |
-|  `--country`                                                                                                                                        | US                                                                 |
+| `--country`                                                                                                                                         | US                                                                 |
 | [`--date_of_birth`](https://stripe.com/docs/api/persons/create#create_person-dob)                                                                   | "01011901"                                                         |
 | [`--email`](https://stripe.com/docs/api/persons/create#create_person-email)                                                                         | [Random email](https://fakerjs.dev/api/internet.html#exampleemail) |
 | [`--first_name`](https://stripe.com/docs/api/persons/create#create_person-first_name)                                                               | [Random first name](https://fakerjs.dev/api/name.html#firstname)   |
@@ -85,6 +85,7 @@ await onboard({
 > Immediately after the promise returned by the `onboard` function is resolved, the Connect account's status will be "Pending" which means the account is still being verified by Stripe. This can take up to a few minutes to complete. You can poll [retrieving the account](https://stripe.com/docs/api/accounts/retrieve) to check if the account has [`charges_enabled`](https://stripe.com/docs/api/accounts/object#account_object-charges_enabled) and [`payouts_enabled`](https://stripe.com/docs/api/accounts/object#account_object-payouts_enabled).
 
 # Contributing
+
 To contribute, you need the following prerequisites:
 
 - Node 18 or higher

@@ -216,7 +216,7 @@ async function submitSetUpPayments(page: EnhancedPage, values: OnboardValues) {
     await page.click("#radio3");
   }
 
-  await page.select('.PhoneInput select', values.country);
+  await page.select(".PhoneInput select", values.country);
   await page.type("#phone_number", values.phone);
 
   await page.type("#email", values.email);
@@ -244,7 +244,7 @@ async function submitBusinessRepForm(
   await typeDateOfBirth(page, values);
   await typeAddress(page, values);
 
-  await page.select('.PhoneInput select', values.country);
+  await page.select(".PhoneInput select", values.country);
   await page.type("#phone", values.phone); // Used in non-OAuth flow
 
   await page.type("#phone_number", values.phone); // Used in OAuth flow
@@ -262,7 +262,7 @@ async function submitBusinessRepForm(
  * Submits the "Tell us about your business" form
  */
 async function submitBusinessType(page: EnhancedPage, values: OnboardValues) {
-  await page.select('#country', values.country);
+  await page.select("#country", values.country);
 
   await page.select("#business_type", values.business_type);
   await page.click('button[type="submit"]');
