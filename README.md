@@ -88,4 +88,4 @@ await onboard({
 
 To contribute, you need the following prerequisites:
 
-- Node 18 or higher
+- Node >18
