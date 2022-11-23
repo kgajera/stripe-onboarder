@@ -171,7 +171,7 @@ async function createStripeAccountAndAccountLink(
 ): Promise<Pick<Stripe.Account, "id"> & Pick<Stripe.AccountLink, "url">> {
   const { default: Stripe } = await import("stripe");
   const stripe = new Stripe(stripeSecretKey, {
-    apiVersion: "2022-08-01",
+    apiVersion: "2022-11-15",
   });
 
   const account = await stripe.accounts.create({ type: "express" });
