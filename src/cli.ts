@@ -141,6 +141,8 @@ yargs(hideBin(process.argv))
         url,
         values: argv,
       });
+
+      process.exit(0);
     }
   )
   .demandCommand()
