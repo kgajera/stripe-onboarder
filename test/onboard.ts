@@ -15,15 +15,15 @@ const stripe = new Stripe(process.env["STRIPE_SECRET_KEY"], {
 
 const timeout = 60 * 1000 * 3;
 
-describe("onboard", { timeout }, () => {
-  it("onboards 'company' business type", async () => {
+describe("onboard", () => {
+  it("onboards 'company' business type", { timeout }, async () => {
     const account = await createAndOnboardAccount({ business_type: "company" });
     await waitForAccountVerification(account.id);
     const paymentIntent = await confirmPayment(account.id);
     assert.deepEqual(paymentIntent.status, "succeeded");
   });
 
-  it("onboards 'individual' business type", async () => {
+  it("onboards 'individual' business type", { timeout }, async () => {
     const account = await createAndOnboardAccount({
       business_type: "individual",
     });
@@ -32,7 +32,7 @@ describe("onboard", { timeout }, () => {
     assert.deepEqual(paymentIntent.status, "succeeded");
   });
 
-  it("onboards 'non_profit' business type", async () => {
+  it("onboards 'non_profit' business type", { timeout }, async () => {
     const account = await createAndOnboardAccount({
       business_type: "non_profit",
     });
