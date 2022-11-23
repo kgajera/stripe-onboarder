@@ -51,7 +51,7 @@
     "inquirer": "^9.1.1",
     "ora": "^6.1.2",
     "puppeteer": "^17.1.0",
-    "stripe": "^10.8.0",
+    "stripe": "^11.1.0",
     "yargs": "^17.5.1"
   },
   "devDependencies": {

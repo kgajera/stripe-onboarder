@@ -10,10 +10,12 @@ if (!process.env["STRIPE_SECRET_KEY"]) {
 }
 
 const stripe = new Stripe(process.env["STRIPE_SECRET_KEY"], {
-  apiVersion: "2022-08-01",
+  apiVersion: "2022-11-15",
 });
 
-describe("onboard", () => {
+const timeout = 60 * 1000 * 3;
+
+describe("onboard", { timeout }, () => {
   it("onboards 'company' business type", async () => {
     const account = await createAndOnboardAccount({ business_type: "company" });
     await waitForAccountVerification(account.id);
@@ -51,7 +53,7 @@ async function createAndOnboardAccount(values: Partial<OnboardValues> = {}) {
   });
 
   await onboard({
-    headless: true,
+    headless: false,
     url: accountLink.url,
     values,
   });
