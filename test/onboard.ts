@@ -3,7 +3,7 @@ import { faker } from "@faker-js/faker";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import Stripe from "stripe";
-import { onboard, OnboardValues } from "../src/onboard";
+import { BusinessType, onboard, OnboardValues } from "../src/onboard";
 
 if (!process.env["STRIPE_SECRET_KEY"]) {
   throw new Error("STRIPE_SECRET_KEY is required");
@@ -13,37 +13,77 @@ const stripe = new Stripe(process.env["STRIPE_SECRET_KEY"], {
   apiVersion: "2022-11-15",
 });
 
-const timeout = 60 * 1000 * 3;
+const describeMatrix = <TParams extends Record<string, any>>(
+  fn: (params: TParams) => void,
+  input: { [Key in keyof TParams]: TParams[Key][]}
+) => {
+  const keys = Object.keys(input) as (keyof TParams)[];
+  const values = keys.map((key) => input[key]);
 
-describe("onboard", () => {
-  it("onboards 'company' business type", { timeout }, async () => {
-    const account = await createAndOnboardAccount({ business_type: "company" });
-    await waitForAccountVerification(account.id);
-    const paymentIntent = await confirmPayment(account.id);
-    assert.deepEqual(paymentIntent.status, "succeeded");
-  });
+  const combinations = values.reduce(
+    (acc: any, value: any) => acc.flatMap((x: any) => value.map((y: any) => [...x, y])),
+    [[]] as TParams[keyof TParams][]
+  );
+  throw new Error(JSON.stringify(combinations));
 
-  it("onboards 'individual' business type", { timeout }, async () => {
-    const account = await createAndOnboardAccount({
-      business_type: "individual",
-    });
-    await waitForAccountVerification(account.id);
-    const paymentIntent = await confirmPayment(account.id);
-    assert.deepEqual(paymentIntent.status, "succeeded");
-  });
+  for (const combination of combinations) {
+    const params = keys.reduce((acc, key, index) => {
+      acc[key] = combination[index];
+      return acc;
+    }, {} as TParams);
 
-  it("onboards 'non_profit' business type", { timeout }, async () => {
-    const account = await createAndOnboardAccount({
-      business_type: "non_profit",
-    });
-    await waitForAccountVerification(account.id);
-    const paymentIntent = await confirmPayment(account.id);
-    assert.deepEqual(paymentIntent.status, "succeeded");
-  });
+    describe(
+      JSON.stringify(params), 
+      { timeout: 60 * 1000 * 3 },
+      () => {
+        fn(params);
+      });
+  }
+};
+
+describe("onboard", { concurrency: 32 }, () => {
+  describeMatrix(
+    async ({ 
+      business_type, 
+      country,
+      capabilities
+    }) => {
+      const account = await createAndOnboardAccount(
+        {
+          business_type,
+          country
+        },
+        { 
+          capabilities 
+        }
+      );
+      await waitForAccountVerification(account.id);
+      const paymentIntent = await confirmPayment(account.id);
+      assert.deepEqual(paymentIntent.status, "succeeded");
+    },
+    {
+      business_type: ["company", "individual", "non_profit"] as BusinessType[],
+      country: ["US", "DK"],
+      capabilities: [
+        {}, 
+        {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        }
+      ],
+    }
+  );
 });
 
-async function createAndOnboardAccount(values: Partial<OnboardValues> = {}) {
-  const account = await stripe.accounts.create({ type: "express" });
+async function createAndOnboardAccount(
+  values: Partial<OnboardValues> = {},
+  accountOptions: Partial<Stripe.AccountCreateParams> = {}
+) {
+  const account = await stripe.accounts.create({
+    type: "express",
+    country: "US",
+    ...accountOptions,
+  });
 
   const accountLink = await stripe.accountLinks.create({
     account: account.id,

@@ -18,6 +18,7 @@ type EnhancedPage = Pick<
 > & {
   task: (promise: PageTask) => Promise<void>;
   tasks: (...promises: (PageTask | false)[]) => Promise<void>;
+  wait: (milliseconds: number) => Promise<void>;
 };
 
 export interface OnboardValues {
@@ -71,13 +72,14 @@ export async function onboard({
   });
 
   const browser = await oraPromise<Browser>(
-    async () => launch({ headless }),
+    async () => launch({ headless, defaultViewport: { width: 1000, height: 1000 } }),
     oraOptions(`Launching${headless ? " headless" : ""} browser`)
   );
 
   const page = await oraPromise<Page>(async () => {
     const page = await browser.newPage();
     await page.goto(url);
+
     return page;
   }, oraOptions("Navigating to Stripe"));
 
@@ -89,17 +91,22 @@ export async function onboard({
   /**
    * Fill out all onboarding forms
    */
-  await enhancedPage.tasks(
-    submitSetUpPayments,
-    submitBusinessType,
-    values.business_type !== "individual" && submitTellUsAboutBusiness,
-    submitBusinessRepForm,
-    values.business_type === "individual" && submitTellUsAboutBusiness,
-    submitPayoutBankAccount,
-    submitReviewDetails
-  );
-
-  await oraPromise(async () => browser.close(), oraOptions("Closing browser"));
+  try {
+    await enhancedPage.tasks(
+      submitSetUpPaymentsForm,
+      submitTellUsAboutYourBusiness,
+      values.business_type !== "individual" && submitTellUsMoreAboutYourBusiness,
+      submitVerifyYouRepresentThisBusinessForm,
+      values.business_type === "individual" && submitTellUsMoreAboutYourBusiness,
+      submitPayoutBankAccount,
+      submitReviewDetails
+    );
+  } finally {
+    await oraPromise(
+      async () => browser.close(),
+      oraOptions("Closing browser")
+    );
+  }
 }
 
 /**
@@ -113,29 +120,25 @@ function enhancePage(
     values,
   }: { oraOptions: (text: string) => Options; values: OnboardValues }
 ): EnhancedPage {
+  const waitForSelectorTimeout = 1000 * 1;
+  const navigationTimeout = 1000 * 60;
+
   const enhancedPage: EnhancedPage = {
     click: async (selector: string) => {
-      try {
-        await page.waitForSelector(selector, { timeout: 100 });
-        await page.click(selector);
-      } catch (error) {
-        // Error will be thrown if selector is not found
-      }
+      await page.waitForSelector(selector, { timeout: waitForSelectorTimeout });
+      await page.click(selector);
     },
     evaluate: (...params) => page.evaluate(...params),
     keyboard: page.keyboard,
     select: async (selector: string, ...value: string[]) => {
-      try {
-        const element = await page.waitForSelector(selector, { timeout: 100 });
-        return (await element?.select(...value)) || [];
-      } catch (error) {
-        // Error will be thrown if selector is not found
-        return [];
-      }
+      const element = await page.waitForSelector(selector, {
+        timeout: waitForSelectorTimeout,
+      });
+      return (await element?.select(...value)) || [];
     },
     task: async (promise: PageTask) => {
       const navOra = ora(oraOptions("Navigating...")).start();
-      await page.waitForNetworkIdle({ idleTime: 500 });
+      await page.waitForNetworkIdle({ idleTime: 100 });
       navOra.stop();
 
       const headingElement = await page.waitForSelector("h1");
@@ -150,20 +153,24 @@ function enhancePage(
       for (const promise of promises) {
         if (promise) {
           await enhancedPage.task(promise);
+          await enhancedPage.waitForNetworkIdle();
         }
       }
     },
-    type: async (selector: string, value: string) => {
-      try {
-        const element = await page.waitForSelector(selector, { timeout: 100 });
-        await element?.click({ clickCount: 3 });
-        await element?.type(value);
-      } catch (error) {
-        // Error will be thrown if selector is not found
-      }
+    wait: async (milliseconds: number) => {
+      await new Promise(resolve => setTimeout(resolve, milliseconds));
     },
-    waitForNavigation: async () => page.waitForNavigation(),
-    waitForNetworkIdle: async () => page.waitForNetworkIdle(),
+    type: async (selector: string, value: string) => {
+      const element = await page.waitForSelector(selector, {
+        timeout: waitForSelectorTimeout,
+      });
+      await element?.click({ clickCount: 3 });
+      await element?.type(value);
+    },
+    waitForNavigation: async () =>
+      page.waitForNavigation({ timeout: navigationTimeout }),
+    waitForNetworkIdle: async () =>
+      page.waitForNetworkIdle({ timeout: navigationTimeout }),
   };
 
   return enhancedPage;
@@ -206,20 +213,10 @@ export function getDefaultOnboardValues(): OnboardValues {
 /**
  * Submits the "Set up payments" form
  */
-async function submitSetUpPayments(page: EnhancedPage, values: OnboardValues) {
-  // Business type when using OAuth
-  if (values.business_type === "company") {
-    await page.click("#radio2");
-  } else if (values.business_type === "individual") {
-    await page.click("#radio1");
-  } else if (values.business_type === "non_profit") {
-    await page.click("#radio3");
-  }
-
+async function submitSetUpPaymentsForm(page: EnhancedPage, values: OnboardValues) {
   await page.select(".PhoneInput select", values.country);
   await page.type("#phone_number", values.phone);
 
-  await page.type("#email", values.email);
   await page.click('button[type="submit"]');
 
   await page.waitForNetworkIdle();
@@ -229,7 +226,7 @@ async function submitSetUpPayments(page: EnhancedPage, values: OnboardValues) {
 /**
  * Submits the "Verify you represent this business" form
  */
-async function submitBusinessRepForm(
+async function submitVerifyYouRepresentThisBusinessForm(
   page: EnhancedPage,
   values: OnboardValues
 ) {
@@ -237,23 +234,16 @@ async function submitBusinessRepForm(
   await page.type("#last_name", values.last_name);
   await page.type("#email", values.email);
 
-  if (values.business_type !== "individual") {
+  if (values.business_type === "non_profit") {
     await page.type('[id="relationship[title]"]', values.title);
   }
 
   await typeDateOfBirth(page, values);
   await typeAddress(page, values);
 
-  await page.select(".PhoneInput select", values.country);
-  await page.type("#phone", values.phone); // Used in non-OAuth flow
+  await page.type("#phone", values.phone);
 
-  await page.type("#phone_number", values.phone); // Used in OAuth flow
   await page.type("#ssn_last_4", values.ssn_last_4);
-  await page.type("#id_number", values.id_number);
-
-  if (values.business_type !== "individual") {
-    await page.click('[name="relationship.owner"]');
-  }
 
   await page.click('button[type="submit"]');
 }
@@ -261,8 +251,12 @@ async function submitBusinessRepForm(
 /**
  * Submits the "Tell us about your business" form
  */
-async function submitBusinessType(page: EnhancedPage, values: OnboardValues) {
-  await page.select("#country", values.country);
+async function submitTellUsAboutYourBusiness(page: EnhancedPage, values: OnboardValues) {
+  try {
+    await page.select("#country", values.country);
+  } catch {
+    //country isn't always present. it seems to unavailable when capabilities are specified.
+  }
 
   await page.select("#business_type", values.business_type);
   await page.click('button[type="submit"]');
@@ -284,7 +278,7 @@ async function submitReviewDetails(page: EnhancedPage) {
 /**
  * Submits the "Tell us more about your business" form
  */
-async function submitTellUsAboutBusiness(
+async function submitTellUsMoreAboutYourBusiness(
   page: EnhancedPage,
   values: OnboardValues
 ) {
@@ -292,7 +286,6 @@ async function submitTellUsAboutBusiness(
     await page.type('[id="company[name]"]', values.company_name);
     await page.type('[id="company[tax_id]"]', values.company_tax_id);
     await typeAddress(page, values);
-    await page.type('[id="company[phone]"]', values.company_phone);
   }
 
   await page.click('button[name="industry"]');
@@ -327,7 +320,14 @@ async function submitPayoutBankAccount(
  * Utility function to fill out address form fields
  */
 async function typeAddress(page: EnhancedPage, values: OnboardValues) {
-  await page.type('[name="address"]', values.address.line1);
+  try {
+    await page.type('[name="address"]', values.address.line1);
+  } catch (e) {
+    //address isn't always present. it seems to be unavailable when capabilities are specified, and the business type is "company".
+    if (values.business_type !== "company") {
+      throw e;
+    }
+  }
 
   // This is necessary to prevent autocompleting the address fields
   await page.keyboard.press("Tab");
@@ -336,25 +336,45 @@ async function typeAddress(page: EnhancedPage, values: OnboardValues) {
     await page.type('[name="address-line2"]', values.address.line2);
   }
 
-  await page.type('[name="locality"]', values.address.city);
-  await page.select("#subregion", values.address.state);
-  await page.type('[name="zip"]', values.address.zip);
+  try {
+    await page.type('[name="locality"]', values.address.city);
+  } catch (e) {
+    //city isn't always present. it seems to be unavailable when capabilities are specified, and the business type is "company".
+    if (values.business_type !== "company") {
+      throw e;
+    }
+  }
+
+  try {
+    await page.select("#subregion", values.address.state);
+  } catch {
+    //state isn't always present. many countries don't have states.
+  }
+
+  try {
+    await page.type('[name="zip"]', values.address.zip);
+  } catch (e) {
+    //address isn't always present. it seems to be unavailable when capabilities are specified, and the business type is "company".
+    if (values.business_type !== "company") {
+      throw e;
+    }
+  }
 }
 
 /**
  * Utility function to fill out date of birth form fields
  */
 async function typeDateOfBirth(page: EnhancedPage, values: OnboardValues) {
-  await page.type("#dob", values.date_of_birth);
-
-  // Randomly, the date field is sometimes displayed as separate select fields
-  await page.select(
-    "#dob-month",
+  await page.type(
+    'input[name="dob-year"]',
+    values.date_of_birth.substring(4)
+  );
+  await page.type(
+    'input[name="dob-month"]',
     values.date_of_birth.substring(0, 2).replace(/^0/, "")
   );
-  await page.select(
-    "#dob-day",
+  await page.type(
+    'input[name="dob-day"]',
     values.date_of_birth.substring(2, 4).replace(/^0/, "")
   );
-  await page.select("#dob-year", values.date_of_birth.substring(4));
 }
