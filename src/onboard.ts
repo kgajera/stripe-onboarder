@@ -35,6 +35,7 @@ export interface OnboardValues {
   company_tax_id: string;
   company_url: string;
   date_of_birth: string;
+  country: string;
   email: string;
   first_name: string;
   id_number: string;
@@ -184,6 +185,7 @@ export function getDefaultOnboardValues(): OnboardValues {
       state: "CA",
       zip: "90210",
     },
+    country: "US",
     business_type: "company",
     company_name: faker.company.name(),
     company_phone: "0000000000",
@@ -214,7 +216,9 @@ async function submitSetUpPayments(page: EnhancedPage, values: OnboardValues) {
     await page.click("#radio3");
   }
 
+  await page.select(".PhoneInput select", values.country);
   await page.type("#phone_number", values.phone);
+
   await page.type("#email", values.email);
   await page.click('button[type="submit"]');
 
@@ -240,7 +244,9 @@ async function submitBusinessRepForm(
   await typeDateOfBirth(page, values);
   await typeAddress(page, values);
 
+  await page.select(".PhoneInput select", values.country);
   await page.type("#phone", values.phone); // Used in non-OAuth flow
+
   await page.type("#phone_number", values.phone); // Used in OAuth flow
   await page.type("#ssn_last_4", values.ssn_last_4);
   await page.type("#id_number", values.id_number);
@@ -256,6 +262,8 @@ async function submitBusinessRepForm(
  * Submits the "Tell us about your business" form
  */
 async function submitBusinessType(page: EnhancedPage, values: OnboardValues) {
+  await page.select("#country", values.country);
+
   await page.select("#business_type", values.business_type);
   await page.click('button[type="submit"]');
 }
