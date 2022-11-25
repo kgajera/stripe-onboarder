@@ -3,6 +3,7 @@ import { faker } from "@faker-js/faker";
 import { describe, it } from "node:test";
 import Stripe from "stripe";
 import { Sema } from 'async-sema';
+import assert from "node:assert/strict";
 import { BusinessType, getDefaultOnboardValues, onboard, OnboardValues } from "../src/onboard";
 
 if (!process.env["STRIPE_SECRET_KEY"]) {
@@ -32,9 +33,10 @@ describe("onboard", { concurrency: 32 }, () => {
           capabilities 
         }
       );
-      // await waitForAccountVerification(account.id);
-      // const paymentIntent = await confirmPayment(account.id);
-      // assert.deepEqual(paymentIntent.status, "succeeded");
+
+      await waitForAccountVerification(account.id);
+      const paymentIntent = await confirmPayment(account.id);
+      assert.deepEqual(paymentIntent.status, "succeeded");
     },
     {
       business_type: ["individual"] as BusinessType[],
