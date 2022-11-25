@@ -1,7 +1,6 @@
 import "dotenv/config";
 import { faker } from "@faker-js/faker";
 import { describe, it } from "node:test";
-import assert from "node:assert/strict";
 import Stripe from "stripe";
 import { Sema } from 'async-sema';
 import { BusinessType, getDefaultOnboardValues, onboard, OnboardValues } from "../src/onboard";
@@ -14,43 +13,6 @@ const stripe = new Stripe(process.env["STRIPE_SECRET_KEY"], {
   apiVersion: "2022-11-15",
 });
 
-const itMatrix = <TParams extends Record<string, unknown>>(
-  fn: (params: TParams) => Promise<void>,
-  input: { [Key in keyof TParams]: TParams[Key][]}
-) => {
-  const keys = Object.keys(input) as (keyof TParams)[];
-  const values = keys.map((key) => input[key]);
-
-  function cartesianProduct<T>(...allEntries: T[][]): T[][] {
-    return allEntries.reduce<T[][]>(
-      (results, entries) =>
-        results
-          .map(result => entries.map(entry => [...result, entry] ))
-          .reduce((subResults, result) => [...subResults, ...result]   , []), 
-      [[]]
-    )
-  }
-
-  const combinations = cartesianProduct(...values);
-
-  for (const combination of combinations) {
-    const params = keys.reduce((acc, key, index) => {
-      const value = combination[index];
-      if(value) {
-        acc[key] = value;
-      }
-      return acc;
-    }, {} as TParams);
-
-    it(
-      JSON.stringify(params), 
-      { timeout: 60 * 1000 * 3 },
-      async () => {
-        await fn(params);
-      });
-  }
-};
-
 describe("onboard", { concurrency: 32 }, () => {
   itMatrix(
     async ({ 
@@ -58,22 +20,7 @@ describe("onboard", { concurrency: 32 }, () => {
       country,
       capabilities
     }) => {
-      const countrySpecificOnboardValues = getDefaultOnboardValues();
-
-      switch(country) {
-        case "US":
-          break;
-
-        case "DK":
-          countrySpecificOnboardValues.phone = "00000000";
-          countrySpecificOnboardValues.company_phone = "00000000";
-          countrySpecificOnboardValues.address.zip = "8000";
-          countrySpecificOnboardValues.address.city = "Aarhus";
-          break;
-
-        default:
-          throw new Error(`Can't infer test phone number for current country: ${country}`);
-      }
+      const countrySpecificOnboardValues = getDefaultOnboardValues(country);
 
       const account = await createAndOnboardAccount(
         {
@@ -90,14 +37,13 @@ describe("onboard", { concurrency: 32 }, () => {
       // assert.deepEqual(paymentIntent.status, "succeeded");
     },
     {
-      business_type: ["company", "individual", "non_profit"] as BusinessType[],
-      country: ["US", "DK"],
+      business_type: ["individual"] as BusinessType[],
+      country: [
+        "US",
+        "DK"
+      ],
       capabilities: [
-        {}, 
-        {
-          card_payments: { requested: true },
-          transfers: { requested: true },
-        }
+        {}
       ],
     }
   );
@@ -132,10 +78,9 @@ async function createAndOnboardAccount(
     return_url: "https://stripe.com",
   });
 
-  throw new Error(accountLink.url);
-
   await onboard({
     headless: false,
+    debug: true,
     url: accountLink.url,
     values,
   });
@@ -195,3 +140,40 @@ async function confirmPayment(accountId: string) {
     }
   );
 }
+
+function itMatrix<TParams extends Record<string, unknown>>(
+  fn: (params: TParams) => Promise<void>,
+  input: { [Key in keyof TParams]: TParams[Key][]}
+) {
+  const keys = Object.keys(input) as (keyof TParams)[];
+  const values = keys.map((key) => input[key]);
+
+  function cartesianProduct<T>(...allEntries: T[][]): T[][] {
+    return allEntries.reduce<T[][]>(
+      (results, entries) =>
+        results
+          .map(result => entries.map(entry => [...result, entry] ))
+          .reduce((subResults, result) => [...subResults, ...result]   , []), 
+      [[]]
+    )
+  }
+
+  const combinations = cartesianProduct(...values);
+
+  for (const combination of combinations) {
+    const params = keys.reduce((acc, key, index) => {
+      const value = combination[index];
+      if(value) {
+        acc[key] = value;
+      }
+      return acc;
+    }, {} as TParams);
+
+    it(
+      JSON.stringify(params), 
+      { timeout: 60 * 1000 * 3 },
+      async () => {
+        await fn(params);
+      });
+  }
+};

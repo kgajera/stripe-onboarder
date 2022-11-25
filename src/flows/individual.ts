@@ -1,17 +1,17 @@
-import { 
+import { waitForNavigation } from "../tasks/puppeteer";
+import {
     clickSubmitButton,
-    clickSubmitButton as clickSubmitEverythingButton,
-    fillOutAccountNumber,
     fillOutAddress,
     fillOutBusinessType,
     fillOutCountry,
     fillOutDateOfBirth,
-    fillOutEmail, 
-    fillOutIndustry, 
-    fillOutLastDigitsOfSocialSecurityNumber, 
-    fillOutPersonalName, 
-    fillOutPhoneNumber, 
-    fillOutRoutingNumber, 
+    fillOutEmail,
+    fillOutIndustry,
+    fillOutLastDigitsOfSocialSecurityNumber,
+    fillOutPages,
+    fillOutPersonalName,
+    fillOutPhoneNumber,
+    fillOutPayoutDetails,
     fillOutVerificationCode,
     fillOutWebsite
 } from "../tasks/stripe";
@@ -19,13 +19,16 @@ import {
 import type { FlowContext } from "./context";
 
 export default async function fillOutIndividualFlow(context: FlowContext) {
-    await fillOutGetPaidByPage(context);
-    await fillOutVerificationCodePage(context);
-    await fillOutTellUsAboutYourBusinessPage(context);
-    await fillOutVerifyYourPersonalDetailsPage(context);
-    await fillOutProfessionalDetailsPage(context);
-    await fillOutSelectAnAccountForPayoutsPage(context);
-    await fillOutReviewAndSubmitPage(context);
+    await fillOutPages(
+        context,
+        [
+            fillOutGetPaidByPage,
+            fillOutVerificationCodePage,
+            fillOutTellUsAboutYourBusinessPage,
+            fillOutVerifyYourPersonalDetailsPage,
+            fillOutProfessionalDetailsPage,
+            fillOutSelectAnAccountForPayoutsPage
+        ]);
 }
 
 async function fillOutGetPaidByPage(context: FlowContext) {
@@ -42,27 +45,30 @@ async function fillOutVerificationCodePage(context: FlowContext) {
 async function fillOutTellUsAboutYourBusinessPage(context: FlowContext) {
     await fillOutCountry(context);
     await fillOutBusinessType(context);
+
+    await clickSubmitButton(context);
 }
 
 async function fillOutVerifyYourPersonalDetailsPage(context: FlowContext) {
     await fillOutPersonalName(context);
+    await fillOutEmail(context);
     await fillOutDateOfBirth(context);
     await fillOutAddress(context);
     await fillOutPhoneNumber(context);
     await fillOutLastDigitsOfSocialSecurityNumber(context);
+
+    await clickSubmitButton(context);
 }
 
 async function fillOutProfessionalDetailsPage(context: FlowContext) {
     await fillOutIndustry(context);
     await fillOutWebsite(context);
+
+    await clickSubmitButton(context);
 }
 
 async function fillOutSelectAnAccountForPayoutsPage(context: FlowContext) {
-    await fillOutRoutingNumber(context);
-    await fillOutAccountNumber(context);
-}
+    await fillOutPayoutDetails(context);
 
-async function fillOutReviewAndSubmitPage(context: FlowContext) {
-    await clickSubmitEverythingButton(context);
+    await clickSubmitButton(context);
 }
-
