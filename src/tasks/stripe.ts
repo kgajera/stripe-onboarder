@@ -1,106 +1,4 @@
-import { Options, oraPromise } from "ora";
-import { type Browser, launch, type Page } from "puppeteer";
 import type { FlowContext } from "../flows/context";
-import type { OnboardOptions, OnboardValues } from "../onboard";
-import { waitForNavigation } from "./puppeteer";
-
-export async function fillOutFlow(
-    options: OnboardOptions,
-    flow: (context: FlowContext) => Promise<void>
-) {
-    if (!options.values) {
-        throw new Error("Values must be set.");
-    }
-
-    const browser = await oraPromise<Browser>(
-        async () => await launch({
-            headless: options.headless ?? true,
-            defaultViewport: {
-                width: 900,
-                height: 1000
-            },
-            slowMo: 0,
-            args: ['--lang=en-US,en']
-        }),
-        getOraOptions(options, `Launching${options.headless ? " headless" : ""} browser`)
-    );
-
-    const closeBrowser = async () =>
-        await oraPromise(
-            async () => await browser.close(),
-            getOraOptions(options, "Closing browser"));
-
-    const page = await oraPromise<Page>(
-        async () => {
-            const page = await browser.newPage();
-
-            await page.setExtraHTTPHeaders({
-                'Accept-Language': 'en-US'
-            });
-
-            await page.goto(options.url);
-
-            return page;
-        },
-        getOraOptions(options, "Navigating to Stripe"));
-
-    try {
-
-        const context = {
-            page,
-            options,
-            values: options.values as OnboardValues
-        };
-
-        await flow(context);
-
-        await clickSubmitButton(context, "requirements-index-done-button");
-
-        await waitForNavigation(page);
-
-        if (options.debug) {
-            await closeBrowser();
-        }
-    } catch (e: unknown) {
-        if (options.debug) {
-            await page.evaluate((e) => window.alert(e), (e as object).toString());
-        } else {
-            await closeBrowser();
-            throw e;
-        }
-    }
-}
-
-export async function fillOutPages(
-    context: FlowContext,
-    pageTasks: Array<(context: FlowContext) => Promise<void>>
-) {
-    for (const task of pageTasks) {
-        await waitForNavigation(context.page);
-
-        const headingElement = await context.page.$("h1");
-        const headingText = await headingElement?.evaluate((el) => el.textContent);
-
-        await oraPromise(
-            async () => {
-                await task(context);
-            },
-            getOraOptions(context.options, headingText?.trim() ?? "")
-        );
-
-        const validationErrors = await context.page.$$('*[role="alert"]');
-        if (validationErrors.length > 0) {
-            const errorMessages = await Promise.all(
-                validationErrors.map(async (el) =>
-                    await el.evaluate(e => e.textContent)));
-            throw new Error(`Validation errors found. ${errorMessages.join(". ")}`);
-        }
-
-        await oraPromise(
-            async () => await waitForNavigation(context.page),
-            getOraOptions(context.options, "Navigating..."));
-    }
-}
 
 export async function fillOutEmail(context: FlowContext) {
     // check if email field is disabled. may occur in test mode.
@@ -210,18 +108,30 @@ export async function fillOutPayoutDetails(context: FlowContext) {
     await context.page.type('*[id="account_numbers[account_number_validate]"]', context.values.account_number);
 }
 
-//data-test="test-mode-fill-button"
+export async function fillOutTwentyFivePercentOwnershipConfirmation(context: FlowContext) {
+    const ownershipConfirmationCheckbox = await context.page.$('input[type="checkbox"][name="relationship.owner"]');
+    if(!ownershipConfirmationCheckbox) {
+        //this ownership confirmation checkbox is only present for the "business" type in some countries.
+        return;
+    }
+
+    await ownershipConfirmationCheckbox.click();
+}
+
+export async function fillOutLegalBusinessName(context: FlowContext) {
+    await context.page.type('*[id="company[name]"]', context.values.company_name);
+}
+
+export async function fillOutEmployerIdentificationNumber(context: FlowContext) {
+    await context.page.type('*[id="company[tax_id]"]', context.values.company_tax_id);
+}
+
+export async function fillOutRegisteredBusinessAddress(context: FlowContext) {
+    await fillOutAddress(context);
+}
 
 export async function clickSubmitButton(context: FlowContext, dataTest?: string) {
     await context.page.click(dataTest ?
         `button[data-test="${dataTest}"]` :
         `button[type="submit"]`);
-}
-
-function getOraOptions(options: OnboardOptions, text: string): Options {
-    return {
-        text: text,
-        isSilent: options?.silent ?? true,
-        isEnabled: options?.silent ?? true
-    };
 }

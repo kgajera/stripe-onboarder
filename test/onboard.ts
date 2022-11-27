@@ -39,7 +39,10 @@ describe("onboard", { concurrency: 32 }, () => {
       assert.deepEqual(paymentIntent.status, "succeeded");
     },
     {
-      business_type: ["individual"] as BusinessType[],
+      business_type: [
+        "individual", 
+        "company"
+      ] as BusinessType[],
       country: [
         "US",
         "DK"
@@ -173,7 +176,7 @@ function itMatrix<TParams extends Record<string, unknown>>(
 
     it(
       JSON.stringify(params), 
-      { timeout: 60 * 1000 * 3 },
+      { timeout: 60 * 1000 * 5 },
       async () => {
         await fn(params);
       });

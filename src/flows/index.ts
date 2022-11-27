@@ -1,16 +1,17 @@
 import type { BusinessType } from "../onboard";
+import fillOutCompanyFlow from "./company";
 import type { FlowContext } from "./context";
 
-import fillOutIndividualFlow from "./individual";
+import getIndividualFlowPages from "./individual";
 
 type AllFlows = {
-    [key in BusinessType]: (context: FlowContext) => Promise<void>;
+    [key in BusinessType]: ((context: FlowContext) => Promise<void>)[];
 }
 
 const flows: AllFlows = {
-    individual: fillOutIndividualFlow,
-    company: () => {throw new Error("Not implemented.")},
-    non_profit: () => {throw new Error("Not implemented.")},
+    individual: getIndividualFlowPages,
+    company: fillOutCompanyFlow,
+    non_profit: [],
 };
 
 export default flows;
