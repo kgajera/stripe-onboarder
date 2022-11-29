@@ -68,7 +68,7 @@ async function createAndOnboardAccount(values: Partial<OnboardValues> = {}) {
   });
 
   await onboard({
-    headless: false,
+    headless: !isCi,
     debug: !isCi && values,
     url: accountLink.url,
     values,
