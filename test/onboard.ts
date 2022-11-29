@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import Stripe from "stripe";
 import { Sema } from "async-sema";
 import assert from "node:assert/strict";
+import isCi from "is-ci";
 import {
   BusinessType,
   getDefaultOnboardValues,
@@ -68,7 +69,7 @@ async function createAndOnboardAccount(values: Partial<OnboardValues> = {}) {
 
   await onboard({
     headless: false,
-    debug: values,
+    debug: !isCi && values,
     url: accountLink.url,
     values,
   });
