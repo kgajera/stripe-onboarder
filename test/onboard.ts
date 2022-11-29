@@ -18,8 +18,7 @@ describe("onboard", { concurrency: 32 }, () => {
   itMatrix(
     async ({ 
       business_type, 
-      country,
-      capabilities
+      country
     }) => {
       const countrySpecificOnboardValues = getDefaultOnboardValues(country);
 
@@ -28,9 +27,6 @@ describe("onboard", { concurrency: 32 }, () => {
           ...countrySpecificOnboardValues,
           business_type,
           country
-        },
-        { 
-          capabilities 
         }
       );
 
@@ -47,10 +43,7 @@ describe("onboard", { concurrency: 32 }, () => {
       country: [
         "US",
         "DK"
-      ],
-      capabilities: [
-        {}
-      ],
+      ]
     }
   );
 });
@@ -59,8 +52,7 @@ describe("onboard", { concurrency: 32 }, () => {
 const accountCreateSemaphore = new Sema(3);
 
 async function createAndOnboardAccount(
-  values: Partial<OnboardValues> = {},
-  accountOptions: Partial<Stripe.AccountCreateParams> = {}
+  values: Partial<OnboardValues> = {}
 ) {
   let account: Stripe.Response<Stripe.Account>;
 
@@ -70,8 +62,7 @@ async function createAndOnboardAccount(
     await new Promise(resolve => setTimeout(resolve, 1250));
 
     account = await stripe.accounts.create({
-      type: "express",
-      ...accountOptions,
+      type: "express"
     });
   } finally {
    accountCreateSemaphore.release();
