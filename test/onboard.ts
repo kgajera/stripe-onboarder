@@ -68,8 +68,7 @@ async function createAndOnboardAccount(values: Partial<OnboardValues> = {}) {
   });
 
   await onboard({
-    headless: isCi,
-    debug: !isCi && values,
+    headless: true,
     url: accountLink.url,
     values,
   });
@@ -91,7 +90,7 @@ async function waitForAccountVerification(accountId: string, timeout = 180000) {
 
       const account = await stripe.accounts.retrieve(accountId);
 
-      if (account.charges_enabled && account.payouts_enabled) {
+      if (account.charges_enabled) {
         clearInterval(interval);
         resolve(account);
       }
