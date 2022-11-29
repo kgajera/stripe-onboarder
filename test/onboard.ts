@@ -77,10 +77,7 @@ async function createAndOnboardAccount(
 
   await onboard({
     headless: false,
-    debug: [
-      values,
-      accountOptions
-    ],
+    debug: values,
     url: accountLink.url,
     values,
   });
