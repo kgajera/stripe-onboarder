@@ -41,7 +41,8 @@ describe("onboard", { concurrency: 32 }, () => {
     {
       business_type: [
         "individual", 
-        "company"
+        "company",
+        "non_profit"
       ] as BusinessType[],
       country: [
         "US",
@@ -85,7 +86,10 @@ async function createAndOnboardAccount(
 
   await onboard({
     headless: false,
-    debug: true,
+    debug: [
+      values,
+      accountOptions
+    ],
     url: accountLink.url,
     values,
   });
@@ -107,7 +111,7 @@ async function waitForAccountVerification(accountId: string, timeout = 180000) {
 
       const account = await stripe.accounts.retrieve(accountId);
 
-      if (account.charges_enabled) {
+      if (account.charges_enabled && account.payouts_enabled) {
         clearInterval(interval);
         resolve(account);
       }

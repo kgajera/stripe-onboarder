@@ -9,13 +9,28 @@ export async function fillOutEmail(context: FlowContext) {
     await context.page.type("#email", context.values.email);
 }
 
-export async function fillOutPhoneNumber(context: FlowContext) {
+export async function fillOutPhoneNumber(context: FlowContext, type: "company" | "personal") {
     const phoneSelectField = await context.page.$('.PhoneInput select');
     if (phoneSelectField) {
         await phoneSelectField.select(context.values.country);
-        await context.page.type("#phone_number", context.values.phone);
+    }
+
+    if(type === "company") {
+        const phoneInputField = await context.page.$(`*[id="company[phone]"]`);
+        if(phoneInputField) {
+            await phoneInputField.type(context.values.company_phone);
+        }
+    } else if(type === "personal") {
+        const phoneInputField = 
+            await context.page.$(`*[id="phone_number"]`) ??
+            await context.page.$(`*[id="phone"]`);
+        if(!phoneInputField) {
+            throw new Error("Could not find phone number input field.");
+        }
+
+        await phoneInputField.type(context.values.phone);
     } else {
-        await context.page.type('input[name="phone"]', context.values.phone);
+        throw new Error(`Unhandled phone number type: ${type}`);
     }
 }
 
@@ -40,6 +55,16 @@ export async function fillOutBusinessType(context: FlowContext) {
 export async function fillOutPersonalName(context: FlowContext) {
     await context.page.type("#first_name", context.values.first_name);
     await context.page.type("#last_name", context.values.last_name);
+}
+
+export async function fillOutProductDescription(context: FlowContext) {
+    const productDescriptionField = await context.page.$('*[id="business_profile[product_description]"]');
+    if(!productDescriptionField) {
+        //this field may not be present unless it is a non-profit organization for a non-US country.
+        return;
+    }
+
+    await productDescriptionField.type(context.values.company_name);
 }
 
 export async function fillOutDateOfBirth(context: FlowContext) {
@@ -108,18 +133,52 @@ export async function fillOutPayoutDetails(context: FlowContext) {
     await context.page.type('*[id="account_numbers[account_number_validate]"]', context.values.account_number);
 }
 
-export async function fillOutTwentyFivePercentOwnershipConfirmation(context: FlowContext) {
+export async function fillOutPercentOwnershipConfirmation(context: FlowContext) {
     const ownershipConfirmationCheckbox = await context.page.$('input[type="checkbox"][name="relationship.owner"]');
-    if(!ownershipConfirmationCheckbox) {
+    if (ownershipConfirmationCheckbox) {
         //this ownership confirmation checkbox is only present for the "business" type in some countries.
+        await ownershipConfirmationCheckbox.click();
+    }
+
+    const ownershipPercentField = await context.page.$('*[id="relationship[percent_ownership]"]');
+    if (ownershipPercentField) {
+        //this ownership confirmation checkbox is only present for the "business" type in some countries.
+        await ownershipPercentField.type("100");
+    }
+}
+
+export async function fillOutPeopleForm(context: FlowContext) {
+    //this function is for pages like "Business Executives" and "Business Representatives" lists, where a list of people can be selected.
+    //we always just select nothing for now, if the page is present.
+
+    const isPagePresent = 
+        !await context.page.$(".db-ConsumerUIWrapper-right input") &&
+        !await context.page.$(".db-ConsumerUIWrapper-right select") &&
+        await context.page.$(".db-ConsumerUIWrapper-right button");
+    if(!isPagePresent) {
         return;
     }
 
-    await ownershipConfirmationCheckbox.click();
+    const blueButton = await context.page.$(".Button--color--blue button");
+    if(!blueButton) {
+        throw new Error("Could not find confirmation button.");
+    }
+
+    await blueButton.click();
 }
 
 export async function fillOutLegalBusinessName(context: FlowContext) {
     await context.page.type('*[id="company[name]"]', context.values.company_name);
+}
+
+export async function fillOutJobTitle(context: FlowContext) {
+    const jobTitleField = await context.page.$('*[id="relationship[title]"]');
+    if (!jobTitleField) {
+        //job title only seems to be available in some countries.
+        return;
+    }
+
+    await jobTitleField.type(context.values.company_name);
 }
 
 export async function fillOutEmployerIdentificationNumber(context: FlowContext) {

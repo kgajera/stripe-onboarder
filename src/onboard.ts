@@ -39,7 +39,7 @@ export interface OnboardOptions {
   silent?: boolean;
   values?: Partial<OnboardValues>;
   url: string;
-  debug?: boolean;
+  debug?: boolean|object;
 }
 
 export async function onboard(options: OnboardOptions) {
@@ -174,7 +174,7 @@ async function fillOutFlow(
         }
     } catch (e: unknown) {
         if (options.debug) {
-            await page.evaluate((e) => window.alert(e), (e as object).toString());
+            await page.evaluate((e) => window.alert(e), (e as object).toString() + "\n" + JSON.stringify(options.debug));
         } else {
             await closeBrowser();
             throw e;
@@ -183,6 +183,12 @@ async function fillOutFlow(
 }
 
 async function fillOutSummaryPage(context: FlowContext) {
+  const statusBoxes = await context.page.$$("*[role=status]");
+  if(statusBoxes.length > 0) {
+    //if status boxes are present, it means that there is missing information.
+    throw new Error("Fields were missing in summary despite no errors during flow.");
+  }
+  
   await clickSubmitButton(context, "requirements-index-done-button");
 
   const dialogConfirmButton = await context.page.$('*[role="dialog"] button.Button--color--blue');
@@ -225,7 +231,7 @@ async function fillOutPages(
 
 async function fillOutGetPaidByPage(context: FlowContext) {
     await fillOutEmail(context);
-    await fillOutPhoneNumber(context);
+    await fillOutPhoneNumber(context, "personal");
 
     await clickSubmitButton(context);
 }

@@ -29,7 +29,7 @@ async function fillOutVerifyYourPersonalDetailsPage(context: FlowContext) {
     await fillOutEmail(context);
     await fillOutDateOfBirth(context);
     await fillOutAddress(context);
-    await fillOutPhoneNumber(context);
+    await fillOutPhoneNumber(context, "personal");
     await fillOutLastDigitsOfSocialSecurityNumber(context);
 
     await clickSubmitButton(context);

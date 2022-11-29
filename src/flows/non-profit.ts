@@ -14,6 +14,7 @@ import {
     fillOutRegisteredBusinessAddress,
     fillOutPercentOwnershipConfirmation,
     fillOutJobTitle,
+    fillOutProductDescription,
     fillOutPeopleForm
 } from "../tasks/stripe";
 
@@ -23,6 +24,7 @@ export default [
     fillOutTellUsAboutYourBusinessPage,
     fillOutTellUsMoreAboutYourBusinessPage,
     fillOutVerifyYouRepresentThisBusiness,
+    fillOutBusinessDirectorsPage,
     fillOutBusinessExecutivesPage,
     fillOutSelectAnAccountForPayoutsPage
 ];
@@ -38,6 +40,7 @@ async function fillOutTellUsMoreAboutYourBusinessPage(context: FlowContext) {
     await fillOutPhoneNumber(context, "company");
     await fillOutIndustry(context);
     await fillOutWebsite(context);
+    await fillOutProductDescription(context);
 
     await clickSubmitButton(context);
 }
@@ -56,6 +59,10 @@ async function fillOutVerifyYouRepresentThisBusiness(context: FlowContext) {
 }
 
 async function fillOutBusinessExecutivesPage(context: FlowContext) {
+    await fillOutPeopleForm(context);
+}
+
+async function fillOutBusinessDirectorsPage(context: FlowContext) {
     await fillOutPeopleForm(context);
 }
 
