@@ -1,5 +1,12 @@
 import { faker } from "@faker-js/faker";
-import { clickSubmitButton, fillOutBusinessType, fillOutCountry, fillOutEmail, fillOutPhoneNumber, fillOutVerificationCode } from "./tasks/stripe";
+import {
+  clickSubmitButton,
+  fillOutBusinessType,
+  fillOutCountry,
+  fillOutEmail,
+  fillOutPhoneNumber,
+  fillOutVerificationCode,
+} from "./tasks/stripe";
 import allFlows from "./flows";
 import { Options, oraPromise } from "ora";
 import { type Browser, launch, type Page } from "puppeteer";
@@ -39,28 +46,27 @@ export interface OnboardOptions {
   silent?: boolean;
   values?: Partial<OnboardValues>;
   url: string;
-  debug?: boolean|object;
+  debug?: boolean | object;
 }
 
 export async function onboard(options: OnboardOptions) {
-  if(options.headless === undefined)
-    options.headless = true;
+  if (options.headless === undefined) options.headless = true;
 
-  if(options.silent === undefined)
-    options.silent = true;
+  if (options.silent === undefined) options.silent = true;
 
   // Merge default values and given values to use for onboarding forms
   const values = {
     ...getDefaultOnboardValues(options.values?.country),
-    ...options.values
+    ...options.values,
   };
 
   await fillOutFlow(
     {
       ...options,
-      values
+      values,
     },
-    allFlows[values.business_type]);
+    allFlows[values.business_type]
+  );
 }
 
 /**
@@ -96,7 +102,7 @@ export function getDefaultOnboardValues(country = "US"): OnboardValues {
     title: faker.name.jobTitle(),
   };
 
-  switch(country) {
+  switch (country) {
     case "DK":
       defaultValues.phone = "00000000";
       defaultValues.company_phone = "00000000";
@@ -114,141 +120,150 @@ export function getDefaultOnboardValues(country = "US"): OnboardValues {
 }
 
 async function fillOutFlow(
-    options: OnboardOptions,
-    pageTasks: Array<(context: FlowContext) => Promise<void>>
+  options: OnboardOptions,
+  pageTasks: Array<(context: FlowContext) => Promise<void>>
 ) {
-    if (!options.values) {
-        throw new Error("Values must be set.");
-    }
+  if (!options.values) {
+    throw new Error("Values must be set.");
+  }
 
-    const browser = await oraPromise<Browser>(
-        async () => await launch({
-            headless: options.headless ?? true,
-            defaultViewport: {
-                width: 900,
-                height: 1000
-            },
-            slowMo: 0,
-            args: ['--lang=en-US,en']
-        }),
-        getOraOptions(options, `Launching${options.headless ? " headless" : ""} browser`)
+  const browser = await oraPromise<Browser>(
+    async () =>
+      await launch({
+        headless: options.headless ?? true,
+        defaultViewport: {
+          width: 900,
+          height: 1000,
+        },
+        slowMo: 0,
+        args: ["--lang=en-US,en"],
+      }),
+    getOraOptions(
+      options,
+      `Launching${options.headless ? " headless" : ""} browser`
+    )
+  );
+
+  const closeBrowser = async () =>
+    await oraPromise(
+      async () => await browser.close(),
+      getOraOptions(options, "Closing browser")
     );
 
-    const closeBrowser = async () =>
-        await oraPromise(
-            async () => await browser.close(),
-            getOraOptions(options, "Closing browser"));
+  const page = await oraPromise<Page>(async () => {
+    const page = await browser.newPage();
 
-    const page = await oraPromise<Page>(
-        async () => {
-            const page = await browser.newPage();
+    await page.setExtraHTTPHeaders({
+      "Accept-Language": "en-US",
+    });
 
-            await page.setExtraHTTPHeaders({
-                'Accept-Language': 'en-US'
-            });
+    await page.goto(options.url);
 
-            await page.goto(options.url);
+    return page;
+  }, getOraOptions(options, "Navigating to Stripe"));
 
-            return page;
-        },
-        getOraOptions(options, "Navigating to Stripe"));
+  try {
+    const context = {
+      page,
+      options,
+      values: options.values as OnboardValues,
+    };
 
-    try {
+    await fillOutPages(context, [
+      fillOutGetPaidByPage,
+      fillOutVerificationCodePage,
+      fillOutTellUsAboutYourBusinessPage,
+      ...pageTasks,
+      fillOutSummaryPage,
+    ]);
 
-        const context = {
-            page,
-            options,
-            values: options.values as OnboardValues
-        };
-
-        await fillOutPages(context, [
-          fillOutGetPaidByPage,
-          fillOutVerificationCodePage,
-          fillOutTellUsAboutYourBusinessPage,
-          ...pageTasks,
-          fillOutSummaryPage
-        ]);
-
-        if (options.debug) {
-            await closeBrowser();
-        }
-    } catch (e: unknown) {
-        if (options.debug) {
-            await page.evaluate((e) => window.alert(e), (e as object).toString() + "\n" + JSON.stringify(options.debug));
-        } else {
-            await closeBrowser();
-            throw e;
-        }
+    if (options.debug) {
+      await closeBrowser();
     }
+  } catch (e: unknown) {
+    if (options.debug) {
+      await page.evaluate(
+        (e) => window.alert(e),
+        (e as object).toString() + "\n" + JSON.stringify(options.debug)
+      );
+    } else {
+      await closeBrowser();
+      throw e;
+    }
+  }
 }
 
 async function fillOutSummaryPage(context: FlowContext) {
   const statusBoxes = await context.page.$$("*[role=status]");
-  if(statusBoxes.length > 0) {
+  if (statusBoxes.length > 0) {
     //if status boxes are present, it means that there is missing information.
-    throw new Error("Fields were missing in summary despite no errors during flow.");
+    throw new Error(
+      "Fields were missing in summary despite no errors during flow."
+    );
   }
-  
+
   await clickSubmitButton(context, "requirements-index-done-button");
 
-  const dialogConfirmButton = await context.page.$('*[role="dialog"] button.Button--color--blue');
-  if(dialogConfirmButton) {
+  const dialogConfirmButton = await context.page.$(
+    '*[role="dialog"] button.Button--color--blue'
+  );
+  if (dialogConfirmButton) {
     //sometimes, a dialog pops up with a confirmation because the information is still validated, asking if we want to continue anyway.
     await dialogConfirmButton.click();
   }
 }
 
 async function fillOutPages(
-    context: FlowContext,
-    pageTasks: Array<(context: FlowContext) => Promise<void>>
+  context: FlowContext,
+  pageTasks: Array<(context: FlowContext) => Promise<void>>
 ) {
-    for (const task of pageTasks) {
-        await waitForNavigation(context.page);
+  for (const task of pageTasks) {
+    await waitForNavigation(context.page);
 
-        const headingElement = await context.page.$("h1");
-        const headingText = await headingElement?.evaluate((el) => el.textContent);
+    const headingElement = await context.page.$("h1");
+    const headingText = await headingElement?.evaluate((el) => el.textContent);
 
-        await oraPromise(
-            async () => {
-                await task(context);
-            },
-            getOraOptions(context.options, headingText?.trim() ?? "")
-        );
+    await oraPromise(async () => {
+      await task(context);
+    }, getOraOptions(context.options, headingText?.trim() ?? ""));
 
-        const validationErrors = await context.page.$$('*[role="alert"]');
-        if (validationErrors.length > 0) {
-            const errorMessages = await Promise.all(
-                validationErrors.map(async (el) =>
-                    await el.evaluate(e => e.textContent)));
-            throw new Error(`Validation errors found. ${errorMessages.join(". ")}`);
-        }
-
-        await oraPromise(
-            async () => await waitForNavigation(context.page),
-            getOraOptions(context.options, "Navigating..."));
+    const validationErrors = await context.page.$$('*[role="alert"]');
+    if (validationErrors.length > 0) {
+      const errorMessages = await Promise.all(
+        validationErrors.map(
+          async (el) => await el.evaluate((e) => e.textContent)
+        )
+      );
+      throw new Error(`Validation errors found. ${errorMessages.join(". ")}`);
     }
+
+    await oraPromise(
+      async () => await waitForNavigation(context.page),
+      getOraOptions(context.options, "Navigating...")
+    );
+  }
 }
 
 async function fillOutGetPaidByPage(context: FlowContext) {
-    await fillOutEmail(context);
-    await fillOutPhoneNumber(context, "personal");
+  await fillOutEmail(context);
+  await fillOutPhoneNumber(context, "personal");
 
-    await clickSubmitButton(context);
+  await clickSubmitButton(context);
 }
 
 async function fillOutVerificationCodePage(context: FlowContext) {
-    await fillOutVerificationCode(context);
+  await fillOutVerificationCode(context);
 }
 
 async function fillOutTellUsAboutYourBusinessPage(context: FlowContext) {
-    await fillOutCountry(context);
-    await fillOutBusinessType(context);
+  await fillOutCountry(context);
+  await fillOutBusinessType(context);
 }
 
 function getOraOptions(options: OnboardOptions, text: string): Options {
-    return {
-        text: text,
-        isSilent: options?.silent ?? true,
-        isEnabled: options?.silent ?? true
-    };
+  return {
+    text: text,
+    isSilent: options?.silent ?? true,
+    isEnabled: options?.silent ?? true,
+  };
 }

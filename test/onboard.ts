@@ -2,9 +2,14 @@ import "dotenv/config";
 import { faker } from "@faker-js/faker";
 import { describe, it } from "node:test";
 import Stripe from "stripe";
-import { Sema } from 'async-sema';
+import { Sema } from "async-sema";
 import assert from "node:assert/strict";
-import { BusinessType, getDefaultOnboardValues, onboard, OnboardValues } from "../src/onboard";
+import {
+  BusinessType,
+  getDefaultOnboardValues,
+  onboard,
+  OnboardValues,
+} from "../src/onboard";
 
 if (!process.env["STRIPE_SECRET_KEY"]) {
   throw new Error("STRIPE_SECRET_KEY is required");
@@ -16,34 +21,22 @@ const stripe = new Stripe(process.env["STRIPE_SECRET_KEY"], {
 
 describe("onboard", { concurrency: 32 }, () => {
   itMatrix(
-    async ({ 
-      business_type, 
-      country
-    }) => {
+    async ({ business_type, country }) => {
       const countrySpecificOnboardValues = getDefaultOnboardValues(country);
 
-      const account = await createAndOnboardAccount(
-        {
-          ...countrySpecificOnboardValues,
-          business_type,
-          country
-        }
-      );
+      const account = await createAndOnboardAccount({
+        ...countrySpecificOnboardValues,
+        business_type,
+        country,
+      });
 
       await waitForAccountVerification(account.id);
       const paymentIntent = await confirmPayment(account.id);
       assert.deepEqual(paymentIntent.status, "succeeded");
     },
     {
-      business_type: [
-        "individual", 
-        "company",
-        "non_profit"
-      ] as BusinessType[],
-      country: [
-        "US",
-        "DK"
-      ]
+      business_type: ["individual", "company", "non_profit"] as BusinessType[],
+      country: ["US", "DK"],
     }
   );
 });
@@ -51,21 +44,19 @@ describe("onboard", { concurrency: 32 }, () => {
 //Stripe only allows us to create 5 accounts per second, so we use a semaphore to limit it to even less.
 const accountCreateSemaphore = new Sema(3);
 
-async function createAndOnboardAccount(
-  values: Partial<OnboardValues> = {}
-) {
+async function createAndOnboardAccount(values: Partial<OnboardValues> = {}) {
   let account: Stripe.Response<Stripe.Account>;
 
   await accountCreateSemaphore.acquire();
   try {
     //wait for one second before account creation. due to the semaphore, up to 5 accounts will do this at the same time.
-    await new Promise(resolve => setTimeout(resolve, 1250));
+    await new Promise((resolve) => setTimeout(resolve, 1250));
 
     account = await stripe.accounts.create({
-      type: "express"
+      type: "express",
     });
   } finally {
-   accountCreateSemaphore.release();
+    accountCreateSemaphore.release();
   }
 
   const accountLink = await stripe.accountLinks.create({
@@ -140,7 +131,7 @@ async function confirmPayment(accountId: string) {
 
 function itMatrix<TParams extends Record<string, unknown>>(
   fn: (params: TParams) => Promise<void>,
-  input: { [Key in keyof TParams]: TParams[Key][]}
+  input: { [Key in keyof TParams]: TParams[Key][] }
 ) {
   const keys = Object.keys(input) as (keyof TParams)[];
   const values = keys.map((key) => input[key]);
@@ -149,10 +140,10 @@ function itMatrix<TParams extends Record<string, unknown>>(
     return allEntries.reduce<T[][]>(
       (results, entries) =>
         results
-          .map(result => entries.map(entry => [...result, entry] ))
-          .reduce((subResults, result) => [...subResults, ...result]   , []), 
+          .map((result) => entries.map((entry) => [...result, entry]))
+          .reduce((subResults, result) => [...subResults, ...result], []),
       [[]]
-    )
+    );
   }
 
   const combinations = cartesianProduct(...values);
@@ -160,17 +151,14 @@ function itMatrix<TParams extends Record<string, unknown>>(
   for (const combination of combinations) {
     const params = keys.reduce((acc, key, index) => {
       const value = combination[index];
-      if(value) {
+      if (value) {
         acc[key] = value;
       }
       return acc;
     }, {} as TParams);
 
-    it(
-      JSON.stringify(params), 
-      { timeout: 60 * 1000 * 5 },
-      async () => {
-        await fn(params);
-      });
+    it(JSON.stringify(params), { timeout: 60 * 1000 * 5 }, async () => {
+      await fn(params);
+    });
   }
-};
+}
