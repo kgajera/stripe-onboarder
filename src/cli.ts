@@ -73,6 +73,10 @@ yargs(hideBin(process.argv))
           company_url: {
             type: "string",
           },
+          country: {
+            type: "string",
+            default: defaults.country,
+          },
           date_of_birth: {
             type: "string",
             default: defaults.date_of_birth,
