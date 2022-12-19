@@ -177,9 +177,7 @@ async function fillOutFlow(
       fillOutSummaryPage,
     ]);
 
-    if (options.debug) {
-      await closeBrowser();
-    }
+    await closeBrowser();
   } catch (e: unknown) {
     if (options.debug) {
       await page.evaluate(
